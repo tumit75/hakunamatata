@@ -3,6 +3,7 @@
 import { useResort } from "@/components/ResortProvider";
 import { Specs } from "@/components/ui/Overlay";
 import { formatDate, formatTimestamp, type EventQuote } from "@/data/resortStorage";
+import { useToast } from "./AdminToast";
 import { Detail, Dot, Icon, ViewHeader } from "./adminUi";
 
 const QUOTE_STATUS: Record<EventQuote["status"], { label: string; dot: string }> = {
@@ -13,11 +14,15 @@ const QUOTE_STATUS: Record<EventQuote["status"], { label: string; dot: string }>
 
 export function EnquiriesView() {
   const { state, money, update } = useResort();
+  const toast = useToast();
   const quotes = [...state.eventQuotes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const tables = [...state.tableReservations].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-  const setQuoteStatus = (id: string, status: EventQuote["status"]) =>
-    update((s) => ({ ...s, eventQuotes: s.eventQuotes.map((q) => (q.id === id ? { ...q, status } : q)) }));
+  const setQuoteStatus = (id: string, status: EventQuote["status"]) => {
+    const q = state.eventQuotes.find((x) => x.id === id);
+    update((s) => ({ ...s, eventQuotes: s.eventQuotes.map((x) => (x.id === id ? { ...x, status } : x)) }));
+    toast(`Enquiry marked ${QUOTE_STATUS[status].label.toLowerCase()}`, { detail: q?.name });
+  };
 
   return (
     <div>
@@ -36,7 +41,7 @@ export function EnquiriesView() {
         ) : (
           <ul className="space-y-3">
             {quotes.map((q) => (
-              <li key={q.id} className="card p-4 sm:p-5">
+              <li key={q.id} className="card lift p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-mute">
@@ -57,7 +62,7 @@ export function EnquiriesView() {
                       ]}
                     />
                   </div>
-                  <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
+                  <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-col sm:items-end">
                     <p className="num text-xl font-semibold text-ink">{money(q.estimateUSD)}</p>
                     <label className="inline-flex items-center gap-2">
                       <Dot className={QUOTE_STATUS[q.status].dot} />
@@ -65,7 +70,7 @@ export function EnquiriesView() {
                       <select
                         value={q.status}
                         onChange={(e) => setQuoteStatus(q.id, e.target.value as EventQuote["status"])}
-                        className="field w-auto py-1.5 pl-2 pr-7 text-xs font-semibold"
+                        className="field min-h-10 w-auto py-1.5 pl-2 pr-7 text-xs font-semibold"
                       >
                         {(Object.keys(QUOTE_STATUS) as EventQuote["status"][]).map((s) => (
                           <option key={s} value={s}>

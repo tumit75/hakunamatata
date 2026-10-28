@@ -13,7 +13,14 @@ import {
   type OtaChannel,
   type OtaFeed,
 } from "@/data/resortStorage";
+import { useToast } from "./AdminToast";
 import { CHANNEL_META, Detail, Dot, Icon, Notice, Spinner, ViewHeader, cottageName } from "./adminUi";
+
+/** Plays a one-off left-to-right fill while a feed syncs. */
+function animateProgress(el: HTMLSpanElement | null) {
+  if (!el || typeof el.animate !== "function") return;
+  el.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: 1200, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" });
+}
 
 const FEED_STATUS: Record<OtaFeed["status"], { label: string; dot: string }> = {
   active: { label: "Active", dot: "bg-forest" },
@@ -23,6 +30,7 @@ const FEED_STATUS: Record<OtaFeed["status"], { label: string; dot: string }> = {
 
 export function OtaView() {
   const { state, cottages, today, update, addBlock, isRangeAvailable } = useResort();
+  const toast = useToast();
   const [copied, setCopied] = useState<string | null>(null);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
@@ -36,6 +44,7 @@ export function OtaView() {
       await navigator.clipboard.writeText(icalExportUrl(cottageId));
       setCopied(cottageId);
       window.setTimeout(() => setCopied((c) => (c === cottageId ? null : c)), 1800);
+      toast("Export link copied", { tone: "info", detail: `Paste it into the channel's calendar import for ${cottageName(cottageId)}.` });
     } catch {
       setNotice({ tone: "warn", text: "Couldn't copy automatically. Select the link and copy it by hand." });
     }
@@ -87,18 +96,19 @@ export function OtaView() {
         ),
       }));
       setSyncing(null);
-      setNotice(
-        win
-          ? {
-              tone: "ok",
-              text: `Imported 1 new reservation from ${label} for ${cottageName(feed.cottageId)}. ${formatRange(win.start, win.end)} is now blocked on the website.`,
-            }
-          : { tone: "ok", text: `${label} is in sync. No new reservations found.` },
-      );
+      toast(win ? `${label} synced · 1 reservation imported` : `${label} is in sync`, {
+        detail: win
+          ? `${cottageName(feed.cottageId)}: ${formatRange(win.start, win.end)} is now blocked on the website.`
+          : `No new reservations for ${cottageName(feed.cottageId)}.`,
+      });
     }, 1200);
   };
 
   const togglePause = (feed: OtaFeed) => {
+    toast(`${CHANNEL_META[feed.channel].label} feed ${feed.status === "paused" ? "resumed" : "paused"}`, {
+      tone: "info",
+      detail: cottageName(feed.cottageId),
+    });
     update((s) => ({
       ...s,
       otaFeeds: s.otaFeeds.map((f) => (f.id === feed.id ? { ...f, status: f.status === "paused" ? "active" : "paused" } : f)),
@@ -108,6 +118,7 @@ export function OtaView() {
   const removeFeed = (feed: OtaFeed) => {
     if (!window.confirm(`Remove the ${CHANNEL_META[feed.channel].label} feed for ${cottageName(feed.cottageId)}? Dates already blocked stay blocked.`)) return;
     update((s) => ({ ...s, otaFeeds: s.otaFeeds.filter((f) => f.id !== feed.id) }));
+    toast(`${CHANNEL_META[feed.channel].label} feed removed`, { tone: "warn", detail: `${cottageName(feed.cottageId)}. Dates already blocked stay blocked.` });
   };
 
   const addFeed = (e: FormEvent) => {
@@ -128,7 +139,7 @@ export function OtaView() {
     }));
     setUrl("");
     setFormError(null);
-    setNotice({ tone: "ok", text: `${CHANNEL_META[channel].label} feed connected to ${cottageName(feedCottage)}. Press “Sync now” to pull its reservations.` });
+    toast(`${CHANNEL_META[channel].label} feed connected`, { detail: `${cottageName(feedCottage)}. Press “Sync now” to pull its reservations.` });
   };
 
   return (
@@ -168,7 +179,7 @@ export function OtaView() {
           {cottages.map((c) => {
             const link = icalExportUrl(c.id);
             return (
-              <li key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <li key={c.id} className="flex flex-col gap-3 p-4 transition-colors duration-150 hover:bg-linen/60 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-ink">{c.name}</p>
                   <p className="num mt-0.5 truncate text-xs text-ink-mute" title={link}>
@@ -176,11 +187,11 @@ export function OtaView() {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => copy(c.id)} className="btn btn-secondary btn-sm">
+                  <button type="button" onClick={() => copy(c.id)} className={`btn btn-sm min-h-10 ${copied === c.id ? "btn-primary" : "btn-secondary"}`}>
                     <Icon name={copied === c.id ? "check" : "copy"} />
                     {copied === c.id ? "Copied" : "Copy link"}
                   </button>
-                  <button type="button" onClick={() => download(c.id)} className="btn btn-ghost btn-sm">
+                  <button type="button" onClick={() => download(c.id)} className="btn btn-ghost btn-sm min-h-10">
                     <Icon name="download" />
                     .ics
                   </button>
@@ -201,7 +212,12 @@ export function OtaView() {
               const isSyncing = syncing === f.id;
               const st = FEED_STATUS[f.status];
               return (
-                <li key={f.id} className="card p-4 sm:p-5">
+                <li key={f.id} className={`card relative animate-fade-in overflow-hidden p-4 transition-[border-color] duration-200 sm:p-5 ${isSyncing ? "border-forest/30" : ""}`}>
+                  {isSyncing && (
+                    <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-forest-soft">
+                      <span ref={animateProgress} className="block h-full origin-left scale-x-0 bg-forest" />
+                    </span>
+                  )}
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                     <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
                       <Detail label="Channel">
@@ -216,7 +232,9 @@ export function OtaView() {
                       </Detail>
                       <Detail label="Status">
                         <span className="inline-flex items-center gap-1.5">
-                          <Dot className={st.dot} />
+                          <span className={f.status === "active" ? "pulse-ring relative isolate inline-flex rounded-full bg-forest" : "inline-flex"}>
+                            <Dot className={st.dot} />
+                          </span>
                           {st.label}
                           <span className="text-ink-mute">
                             · <span className="num">{f.importedBlocks}</span> imported
@@ -233,16 +251,16 @@ export function OtaView() {
                         type="button"
                         onClick={() => syncNow(f)}
                         disabled={f.status === "paused" || syncing !== null}
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary btn-sm min-h-10"
                       >
                         {isSyncing ? <Spinner className="h-3.5 w-3.5" /> : <Icon name="sync" className="h-3.5 w-3.5" />}
                         {isSyncing ? "Syncing…" : "Sync now"}
                       </button>
-                      <button type="button" onClick={() => togglePause(f)} disabled={isSyncing} className="btn btn-secondary btn-sm">
+                      <button type="button" onClick={() => togglePause(f)} disabled={isSyncing} className="btn btn-secondary btn-sm min-h-10">
                         <Icon name={f.status === "paused" ? "play" : "pause"} className="h-3.5 w-3.5" />
                         {f.status === "paused" ? "Resume" : "Pause"}
                       </button>
-                      <button type="button" onClick={() => removeFeed(f)} disabled={isSyncing} className="btn btn-ghost btn-sm text-danger">
+                      <button type="button" onClick={() => removeFeed(f)} disabled={isSyncing} className="btn btn-ghost btn-sm min-h-10 text-danger">
                         <Icon name="trash" className="h-3.5 w-3.5" />
                         Remove
                       </button>
@@ -262,7 +280,7 @@ export function OtaView() {
             <label className="label" htmlFor="feed-channel">
               Channel
             </label>
-            <select id="feed-channel" className="field" value={channel} onChange={(e) => setChannel(e.target.value as OtaChannel)}>
+            <select id="feed-channel" className="field min-h-11" value={channel} onChange={(e) => setChannel(e.target.value as OtaChannel)}>
               <option value="airbnb">Airbnb</option>
               <option value="booking.com">Booking.com</option>
             </select>
@@ -271,7 +289,7 @@ export function OtaView() {
             <label className="label" htmlFor="feed-cottage">
               Cottage
             </label>
-            <select id="feed-cottage" className="field" value={feedCottage} onChange={(e) => setFeedCottage(e.target.value)}>
+            <select id="feed-cottage" className="field min-h-11" value={feedCottage} onChange={(e) => setFeedCottage(e.target.value)}>
               {cottages.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -285,7 +303,7 @@ export function OtaView() {
             </label>
             <input
               id="feed-url"
-              className={`field num text-sm ${formError ? "border-danger" : ""}`}
+              className={`field num min-h-11 text-sm ${formError ? "border-danger" : ""}`}
               value={url}
               onChange={(e) => {
                 setUrl(e.target.value);
@@ -297,12 +315,12 @@ export function OtaView() {
               aria-describedby={formError ? "feed-url-error" : undefined}
             />
           </div>
-          <button type="submit" className="btn btn-primary sm:col-span-2 lg:col-span-1">
+          <button type="submit" className="btn btn-primary min-h-11 sm:col-span-2 lg:col-span-1">
             <Icon name="plus" />
             Add feed
           </button>
           {formError && (
-            <p id="feed-url-error" className="text-sm text-danger sm:col-span-2 lg:col-span-4">
+            <p id="feed-url-error" className="animate-fade-in text-sm text-danger sm:col-span-2 lg:col-span-4">
               {formError}
             </p>
           )}

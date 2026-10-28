@@ -166,7 +166,7 @@ export const COTTAGES: Cottage[] = [
       "Daily housekeeping",
       "Breakfast included",
     ],
-    images: [IMG.treehouseCliff, IMG.roomCanopyView, IMG.roomJungle, IMG.hornbillLeaves],
+    images: [IMG.treehouseCliff, IMG.roomCanopyView, IMG.lodgeBalcony, IMG.roomJungle],
   },
   {
     id: "savannah-stone",
@@ -190,7 +190,7 @@ export const COTTAGES: Cottage[] = [
       "Butler on call",
       "Breakfast included",
     ],
-    images: [IMG.lodgeDeck, IMG.lodgeSuite, IMG.heroPool, IMG.acaciaSunset],
+    images: [IMG.heroPool, IMG.lodgeDeck, IMG.lodgeSuite, IMG.acaciaSunset],
   },
   {
     id: "acacia-family",
@@ -214,7 +214,7 @@ export const COTTAGES: Cottage[] = [
       "Baby cot on request",
       "Breakfast included",
     ],
-    images: [IMG.lodgeLounge, IMG.roomCanopyBalcony, IMG.playground, IMG.roomCanopy],
+    images: [IMG.archPool, IMG.lodgeLounge, IMG.roomCanopyBalcony, IMG.familyPicnic],
   },
   {
     id: "sunset-horizon",
@@ -238,7 +238,7 @@ export const COTTAGES: Cottage[] = [
       "Minibar",
       "Breakfast included",
     ],
-    images: [IMG.heroLodge, IMG.roomRomance, IMG.giraffePool, IMG.giraffeSunset],
+    images: [IMG.bathDeck, IMG.roomRomance, IMG.lodgePoolNight, IMG.starTent],
   },
   {
     id: "forest-garden",
@@ -262,7 +262,7 @@ export const COTTAGES: Cottage[] = [
       "Daily housekeeping",
       "Breakfast included",
     ],
-    images: [IMG.thatchedCottage, IMG.roomTimber, IMG.gardenPath, IMG.gardenHeliconia],
+    images: [IMG.thatchedCottage, IMG.roomTimber, IMG.gardenGazebo, IMG.gardenHeliconia],
   },
 ];
 

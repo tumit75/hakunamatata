@@ -152,6 +152,12 @@ body {
   animation: float-y 4s ease-in-out infinite;
 }
 
+/* Bar that fills left to right; set animation-duration inline. Also makes sure @keyframes progress is emitted. */
+.progress-fill {
+  transform-origin: left center;
+  animation: progress 6s linear both;
+}
+
 .pulse-ring::before {
   content: "";
   position: absolute;

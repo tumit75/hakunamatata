@@ -255,7 +255,9 @@ export function Parallax({
       const rect = el.parentElement?.getBoundingClientRect() ?? el.getBoundingClientRect();
       const vh = window.innerHeight;
       if (rect.bottom < 0 || rect.top > vh) return;
-      const offset = (rect.top + rect.height / 2 - vh / 2) * -speed;
+      const raw = (rect.top + rect.height / 2 - vh / 2) * -speed;
+      const limit = Math.min(140, rect.height * 0.18);
+      const offset = Math.max(-limit, Math.min(limit, raw));
       el.style.transform = `translate3d(0, ${offset.toFixed(1)}px, 0)`;
     };
     const onScroll = () => {

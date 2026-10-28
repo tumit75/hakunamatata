@@ -14,6 +14,7 @@ import {
   type Booking,
   type PaymentMethod,
 } from "@/data/resortStorage";
+import { useToast } from "./AdminToast";
 import { Dot, Icon, Notice, PAYMENT_LABEL, ViewHeader } from "./adminUi";
 
 type FormState = {
@@ -35,6 +36,7 @@ const PAYMENTS = Object.keys(PAYMENT_LABEL) as PaymentMethod[];
 
 export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
   const { cottages, today, rateFor, isRangeAvailable, nightStatus, addBooking, money } = useResort();
+  const toast = useToast();
   const blank = (): FormState => ({
     cottageId: cottages[0].id,
     checkIn: today,
@@ -112,6 +114,7 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
       notifySms: true,
     });
     setCreated(booking);
+    toast(`Booking ${booking.code} created`, { detail: `${booking.guestName} · ${cottage.name} · ${formatRange(booking.checkIn, booking.checkOut)}` });
   };
 
   const reset = () => {
@@ -124,12 +127,12 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
     return (
       <div>
         <ViewHeader eyebrow="Front desk" title="Booking created" />
-        <div className="card mx-auto max-w-xl p-6 text-center sm:p-8">
-          <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-forest-soft text-forest">
+        <div className="card mx-auto max-w-xl animate-pop-in p-6 text-center sm:p-8">
+          <span className="pulse-ring relative isolate mx-auto inline-flex h-12 w-12 animate-pop-in items-center justify-center rounded-full bg-forest-soft text-forest">
             <Icon name="check" className="h-6 w-6" />
           </span>
           <p className="mt-4 text-sm text-ink-soft">Confirmation code</p>
-          <p className="num mt-1 text-3xl font-semibold tracking-wide text-ink">{created.code}</p>
+          <p className="num mt-1 animate-rise-in text-3xl font-semibold tracking-wide text-ink">{created.code}</p>
           <p className="mt-4 font-semibold text-ink">{created.guestName}</p>
           <Specs
             className="mt-1 justify-center"
@@ -284,7 +287,7 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
                 return (
                   <label
                     key={a.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                    className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-[border-color,background-color,transform] duration-150 active:scale-[0.99] ${
                       on ? "border-forest/40 bg-forest-soft/60" : "border-hairline hover:border-hairline-strong"
                     }`}
                   >
@@ -312,7 +315,7 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
         {/* Summary */}
         <aside className="space-y-4 lg:sticky lg:top-0">
           <div className="card overflow-hidden">
-            <Photo src={cottage.images[0]} alt={cottage.name} className="h-36 w-full" sizes="(min-width: 1024px) 400px, 100vw" />
+            <Photo key={cottage.id} src={cottage.images[0]} alt={cottage.name} className="h-36 w-full animate-fade-in" sizes="(min-width: 1024px) 400px, 100vw" />
             <div className="p-4 sm:p-5">
               <p className="display text-xl text-ink">{cottage.name}</p>
               <Specs className="mt-1" items={cottage.specs.slice(0, 3)} />
@@ -325,7 +328,9 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
                   </>
                 ) : available ? (
                   <>
-                    <Dot className="bg-forest" />
+                    <span className="pulse-ring relative isolate inline-flex rounded-full bg-forest">
+                      <Dot className="bg-forest" />
+                    </span>
                     <span className="font-medium text-forest">
                       Available · <span className="num">{formatRange(f.checkIn, f.checkOut)}</span>
                     </span>
@@ -351,7 +356,7 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
                   <Line label="VAT 18%" value={money(quote.taxUSD)} muted />
                   <div className="flex items-baseline justify-between border-t border-hairline pt-3">
                     <dt className="font-semibold text-ink">Total</dt>
-                    <dd className="num text-xl font-semibold text-ink">{money(quote.totalUSD)}</dd>
+                    <dd key={quote.totalUSD} className="num animate-fade-in text-xl font-semibold text-ink">{money(quote.totalUSD)}</dd>
                   </div>
                 </dl>
               )}
@@ -368,7 +373,7 @@ export function WalkInView({ onViewLedger }: { onViewLedger: () => void }) {
             </Notice>
           )}
 
-          <button type="submit" className="btn btn-primary w-full py-3" disabled={!datesValid}>
+          <button type="submit" className="btn btn-primary min-h-12 w-full py-3" disabled={!datesValid}>
             Create booking{quote ? ` · ${money(quote.totalUSD)}` : ""}
           </button>
         </aside>

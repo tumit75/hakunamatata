@@ -5,6 +5,7 @@ import { useResort } from "@/components/ResortProvider";
 import { Photo } from "@/components/ui/Photo";
 import { Specs } from "@/components/ui/Overlay";
 import { UGX_PER_USD, nightlyRateUSD, usdToUgx, type Cottage } from "@/data/resortStorage";
+import { useToast } from "./AdminToast";
 import { Icon, ViewHeader } from "./adminUi";
 
 // Fixed sample nights so previews are deterministic.
@@ -54,6 +55,7 @@ export function RatesView() {
 
 function RateRow({ cottage }: { cottage: Cottage }) {
   const { currency, rateFor, setRate, money } = useResort();
+  const toast = useToast();
   const current = rateFor(cottage.id);
   const shown = currency === "USD" ? current : usdToUgx(current);
   const [draft, setDraft] = useState<string | null>(null);
@@ -72,6 +74,7 @@ function RateRow({ cottage }: { cottage: Cottage }) {
     setDraft(null);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2200);
+    toast(`${cottage.name} rate saved`, { detail: `Base rate is now ${money(draftUSD)} a night. Guests see it immediately.` });
   };
 
   const resetToList = () => {
@@ -79,12 +82,13 @@ function RateRow({ cottage }: { cottage: Cottage }) {
     setDraft(null);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2200);
+    toast(`${cottage.name} back to list price`, { tone: "info", detail: `${money(cottage.baseRateUSD)} a night.` });
   };
 
   return (
-    <div className="card grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.7fr)] lg:items-center">
+    <div className={`card grid gap-4 p-4 transition-[border-color,box-shadow] duration-200 sm:p-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.7fr)] lg:items-center ${dirty ? "border-ember/40 shadow-[0_10px_30px_-20px_rgba(200,125,85,0.6)]" : saved ? "border-forest/30" : ""}`}>
       <div className="flex min-w-0 items-center gap-3.5">
-        <Photo src={cottage.images[0]} alt={cottage.name} className="h-16 w-20 shrink-0 rounded-lg" sizes="80px" />
+        <Photo src={cottage.images[0]} alt={cottage.name} className="h-16 w-20 shrink-0 rounded-lg" imgClassName="transition-transform duration-500 hover:scale-105" sizes="80px" />
         <div className="min-w-0">
           <p className="truncate font-semibold text-ink">{cottage.name}</p>
           <Specs items={[`${cottage.guests} guests`, `${cottage.sizeSqm} m²`]} className="text-xs" />
@@ -119,18 +123,18 @@ function RateRow({ cottage }: { cottage: Cottage }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") save();
               }}
-              className={`field num ${currency === "USD" ? "pl-7" : "pl-12"} ${!valid ? "border-danger" : ""}`}
+              className={`field num min-h-11 ${currency === "USD" ? "pl-7" : "pl-12"} ${!valid ? "border-danger" : ""}`}
               aria-invalid={!valid}
             />
           </div>
-          <button type="button" onClick={save} disabled={!dirty} className="btn btn-primary btn-sm h-[42px]">
+          <button type="button" onClick={save} disabled={!dirty} className="btn btn-primary btn-sm min-h-11 px-4">
             Save
           </button>
         </div>
         <p className="mt-1.5 h-4 text-xs" aria-live="polite">
           {saved ? (
             <span className="inline-flex items-center gap-1 font-semibold text-forest">
-              <Icon name="check" className="h-3.5 w-3.5" /> Saved
+              <span className="inline-flex animate-pop-in"><Icon name="check" className="h-3.5 w-3.5" /></span> Saved
             </span>
           ) : !valid ? (
             <span className="text-danger">Enter a price above zero</span>
@@ -142,9 +146,9 @@ function RateRow({ cottage }: { cottage: Cottage }) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {SAMPLES.map((s) => (
-          <div key={s.label} className="rounded-lg bg-linen px-3 py-2">
+          <div key={s.label} className={`rounded-lg px-3 py-2 transition-colors duration-200 ${dirty ? "bg-ember-soft/70" : "bg-linen"}`}>
             <p className="truncate text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-ink-mute">{s.label}</p>
-            <p className="num mt-0.5 truncate text-sm font-semibold text-ink">{money(nightlyRateUSD(draftUSD, s.iso))}</p>
+            <p key={draftUSD} className="num mt-0.5 animate-fade-in truncate text-sm font-semibold text-ink">{money(nightlyRateUSD(draftUSD, s.iso))}</p>
           </div>
         ))}
       </div>
